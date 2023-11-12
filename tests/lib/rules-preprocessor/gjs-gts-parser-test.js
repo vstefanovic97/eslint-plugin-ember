@@ -761,4 +761,76 @@ describe('multiple tokens in same file', () => {
     expect(resultErrors[2].message).toBe("'bar' is not defined.");
     expect(resultErrors[2].line).toBe(17);
   });
+
+  it('lints while being type aware', async () => {
+    const eslint = new ESLint({
+      ignore: false,
+      useEslintrc: false,
+      plugins: { ember: plugin },
+      overrideConfig: {
+        root: true,
+        env: {
+          browser: true,
+        },
+        plugins: ['ember'],
+        extends: ['plugin:ember/recommended'],
+        overrides: [
+          {
+            files: ['**/*.gts'],
+            parser: 'eslint-plugin-ember/gjs-gts-parser',
+            parserOptions: {
+              project: './tsconfig.eslint.json',
+              tsconfigRootDir: __dirname,
+              extraFileExtensions: ['.gts'],
+            },
+            extends: [
+              'plugin:@typescript-eslint/recommended-requiring-type-checking',
+              'plugin:ember/recommended',
+            ],
+            rules: {
+              'no-trailing-spaces': 'error',
+              '@typescript-eslint/prefer-string-starts-ends-with': 'error',
+            },
+          },
+          {
+            files: ['**/*.ts'],
+            parser: '@typescript-eslint/parser',
+            parserOptions: {
+              project: './tsconfig.eslint.json',
+              tsconfigRootDir: __dirname,
+              extraFileExtensions: ['.gts'],
+            },
+            extends: [
+              'plugin:@typescript-eslint/recommended-requiring-type-checking',
+              'plugin:ember/recommended',
+            ],
+            rules: {
+              'no-trailing-spaces': 'error',
+            },
+          },
+        ],
+        rules: {
+          quotes: ['error', 'single'],
+          semi: ['error', 'always'],
+          'object-curly-spacing': ['error', 'always'],
+          'lines-between-class-members': 'error',
+          'no-undef': 'error',
+          'no-unused-vars': 'error',
+          'ember/no-get': 'off',
+          'ember/no-array-prototype-extensions': 'error',
+          'ember/no-unused-services': 'error',
+        },
+      },
+    });
+
+    const results = await eslint.lintFiles(['**/*.gts', '**/*.ts']);
+
+    const resultErrors = results.flatMap((result) => result.messages);
+
+    expect(resultErrors[0].message).toBe("Use 'String#startsWith' method instead."); // Actual result is "Unsafe member access [0] on an `any` value."
+
+    expect(resultErrors[1].message).toBe("Use 'String#startsWith' method instead.");
+
+    expect(resultErrors[2].message).toBe("Use 'String#startsWith' method instead.");
+  });
 });
